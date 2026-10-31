@@ -1,0 +1,2 @@
+# AdMob > Uygulamalar > app-ads.txt bölümündeki satırı buraya yapıştır. Örnek biçim:
+google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0

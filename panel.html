@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Kelime Sahafı Paneli</title>
+<style>
+:root{--bg:#f6f1e6;--panel:#fffaf0;--ink:#2b1e14;--muted:#6b5a48;--line:#e2d6bd;--bar:#2f5c4e;--bar-soft:#cfe0d6;--accent:#9c7632;--grid:#ece3cf}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#14211b;--panel:#1d2f26;--ink:#ebe5d4;--muted:#9fae9f;--line:#35523f;--bar:#d6a84c;--bar-soft:#4a4430;--accent:#d6a84c;--grid:#26402f}}
+:root[data-theme="dark"]{--bg:#14211b;--panel:#1d2f26;--ink:#ebe5d4;--muted:#9fae9f;--line:#35523f;--bar:#d6a84c;--bar-soft:#4a4430;--accent:#d6a84c;--grid:#26402f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 64px}
+h1{font-family:Georgia,serif;font-weight:400;font-size:28px;margin:0}
+h2{font-size:16px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:13px;margin:4px 0 0}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+button{font:inherit;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px;cursor:pointer}
+button.main{background:var(--bar);color:var(--panel);border-color:var(--bar);font-weight:700}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi span{display:block;color:var(--muted);font-size:13px}
+.kpi b{display:block;font-size:30px;font-variant-numeric:tabular-nums;line-height:1.2;margin-top:4px}
+.kpi small{color:var(--muted);font-size:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}}
+.cols{display:flex;align-items:flex-end;gap:2px;height:160px;border-bottom:1px solid var(--line);margin-top:12px;position:relative}
+.col{flex:1;position:relative;height:100%;display:flex;align-items:flex-end;cursor:default}
+.col i{display:block;width:100%;background:var(--bar);border-radius:4px 4px 0 0;min-height:1px}
+.col:hover i,.col:focus i{opacity:.75}
+.xl{display:flex;gap:2px;font-size:11px;color:var(--muted);margin-top:4px}
+.xl span{flex:1;text-align:center;white-space:nowrap;overflow:hidden}
+.hbar{display:grid;grid-template-columns:120px 1fr 92px;align-items:center;gap:8px;padding:5px 0;font-size:14px}
+.hbar .t{height:14px;background:var(--grid);border-radius:4px;overflow:hidden}
+.hbar .t i{display:block;height:100%;background:var(--bar);border-radius:0 4px 4px 0}
+.hbar b{font-variant-numeric:tabular-nums;text-align:right;font-weight:600}
+.hbar b small{color:var(--muted);font-weight:400}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td{padding:6px 0;border-bottom:1px solid var(--line)}
+td:last-child{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--panel);font-size:12px;padding:6px 8px;border-radius:6px;z-index:9;display:none;white-space:nowrap}
+.note{color:var(--muted);font-size:13px}
+.demo{background:#d6a84c;color:#2b1e14;border-radius:8px;padding:8px 12px;font-weight:700;margin-bottom:12px;display:none}
+#login{max-width:460px}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div><h1>Kelime Sahafı Paneli</h1><p class="sub" id="when">Oyuncu istatistikleri (anonim)</p></div>
+  <div><button id="refresh" hidden>Yenile</button> <button id="out" hidden>Çıkış</button></div>
+</header>
+<div class="demo" id="demo">Örnek veri gösteriliyor. Gerçek veriler için giriş yap.</div>
+
+<section class="card" id="login">
+  <h2>Giriş</h2>
+  <p class="note">Bu sayfayı yalnızca Firebase kurallarına yazdığın Gmail adresi açabilir.</p>
+  <button class="main" id="go">Google ile giriş yap</button>
+  <p class="note"><a href="?demo=1" style="color:var(--accent)">Örnek veriyle nasıl göründüğüne bak</a></p>
+  <p class="note" id="err"></p>
+</section>
+
+<div id="dash" hidden>
+  <div class="kpis" id="kpis"></div>
+  <section class="card">
+    <h2>Günlük aktif oyuncu (son 21 gün)</h2>
+    <p class="note">O gün oyunu en az bir kez açan oyuncu sayısı.</p>
+    <div class="cols" id="dau"></div><div class="xl" id="dauX"></div>
+  </section>
+  <div class="grid2">
+    <section class="card">
+      <h2>Ne kadar ilerliyorlar</h2>
+      <p class="note">Tüm oyuncular içinde, en az şu kadar rafı bitirenlerin oranı.</p>
+      <div id="funnel"></div>
+    </section>
+    <section class="card">
+      <h2>Bırakanlar nerede bıraktı</h2>
+      <p class="note">3 gündür açmayan oyuncuların bitirdiği raf sayısı. En uzun çubuk, en çok kaybettiğimiz yer.</p>
+      <div id="quit"></div>
+    </section>
+  </div>
+  <div class="grid2">
+    <section class="card">
+      <h2>Geri dönüş</h2>
+      <p class="note">İlk açtığı günden N gün sonra yeniden açanların oranı (yeterince eski oyuncular içinde).</p>
+      <div id="ret"></div>
+    </section>
+    <section class="card">
+      <h2>Diğer</h2>
+      <table id="other"></table>
+    </section>
+  </div>
+  <p class="note">Rakamlar oyuncu cihazlarından gelen anonim özetlerden hesaplanır. İstatistikleri kapatan oyuncular burada görünmez.</p>
+</div>
+<div class="tip" id="tip"></div>
+</main>
+
+<script type="module">
+// ======= BURAYI DOLDUR: firebase.config.json içindeki değerlerin aynısı =======
+const FIREBASE = {
+  apiKey: "BURAYA-FIREBASE-WEB-API-ANAHTARI",
+  authDomain: "kelime-sahafi.firebaseapp.com",
+  projectId: "kelime-sahafi",
+  appId: "1:000000000000:web:0000000000000000"
+};
+// ==============================================================================
+const V = "11.10.0";
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString("tr-TR");
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+const dkey = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+const addDays = (k, n) => { const [y, m, d] = k.split("-").map(Number); const t = new Date(y, m - 1, d); t.setDate(t.getDate() + n); return dkey(t); };
+const tip = $("tip");
+function hoverable(el, text) {
+  el.tabIndex = 0;
+  const show = e => { tip.textContent = text; tip.style.display = "block"; const r = el.getBoundingClientRect(); tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 8, Math.max(8, r.left + r.width / 2 - tip.offsetWidth / 2)) + "px"; tip.style.top = (r.top - tip.offsetHeight - 6) + "px"; };
+  el.addEventListener("mouseenter", show); el.addEventListener("focus", show);
+  el.addEventListener("mouseleave", () => tip.style.display = "none"); el.addEventListener("blur", () => tip.style.display = "none");
+}
+function hbars(el, rows, total) {
+  const max = Math.max(1, ...rows.map(r => r[1]));
+  el.innerHTML = "";
+  rows.forEach(([label, n]) => {
+    const row = document.createElement("div"); row.className = "hbar";
+    row.innerHTML = `<span>${label}</span><div class="t"><i style="width:${n / max * 100}%"></i></div><b>${pct(n, total)}% <small>(${fmt(n)})</small></b>`;
+    hoverable(row, `${label}: ${fmt(n)} oyuncu, %${pct(n, total)}`); el.appendChild(row);
+  });
+}
+
+function render(rows) {
+  const T = dkey(new Date()), N = rows.length;
+  const act = k => rows.filter(r => (r.days || []).includes(k)).length;
+  const last7 = new Set(); for (let i = 0; i < 7; i++) rows.forEach(r => (r.days || []).includes(addDays(T, -i)) && last7.add(r));
+  const retN = n => { const el = rows.filter(r => r.first && r.first <= addDays(T, -n)); return [el.filter(r => (r.days || []).includes(addDays(r.first, n))).length, el.length]; };
+  const [r1, e1] = retN(1), [r7, e7] = retN(7);
+  const kp = [
+    ["Toplam oyuncu", fmt(N), `Android ${fmt(rows.filter(r => r.os === "android").length)} · iOS ${fmt(rows.filter(r => r.os === "ios").length)}`],
+    ["Bugün oynayan", fmt(act(T)), `dün ${fmt(act(addDays(T, -1)))}`],
+    ["Son 7 günde oynayan", fmt(last7.size), `%${pct(last7.size, N)} hâlâ aktif`],
+    ["Ertesi gün dönen", e1 ? "%" + pct(r1, e1) : "–", e1 ? `${fmt(r1)} / ${fmt(e1)} oyuncu` : "henüz veri yok"],
+    ["7. gün dönen", e7 ? "%" + pct(r7, e7) : "–", e7 ? `${fmt(r7)} / ${fmt(e7)} oyuncu` : "henüz veri yok"]
+  ];
+  $("kpis").innerHTML = kp.map(k => `<div class="kpi"><span>${k[0]}</span><b>${k[1]}</b><small>${k[2]}</small></div>`).join("");
+
+  const days = []; for (let i = 20; i >= 0; i--) days.push(addDays(T, -i));
+  const dv = days.map(act), mx = Math.max(1, ...dv);
+  $("dau").innerHTML = ""; $("dauX").innerHTML = "";
+  days.forEach((k, i) => {
+    const c = document.createElement("div"); c.className = "col"; c.innerHTML = `<i style="height:${dv[i] / mx * 100}%"></i>`;
+    const [, m, d] = k.split("-"); hoverable(c, `${Number(d)}.${Number(m)}: ${fmt(dv[i])} oyuncu`); $("dau").appendChild(c);
+    const s = document.createElement("span"); s.textContent = i % 3 === 0 || i === 20 ? `${Number(d)}.${Number(m)}` : ""; $("dauX").appendChild(s);
+  });
+
+  const steps = [["Öğreticiyi bitirdi", r => r.tut], ["1 raf", r => r.levels >= 1], ["3 raf", r => r.levels >= 3], ["5 raf", r => r.levels >= 5], ["10 raf", r => r.levels >= 10], ["20 raf", r => r.levels >= 20], ["50 raf", r => r.levels >= 50], ["100 raf", r => r.levels >= 100]];
+  hbars($("funnel"), steps.map(([l, f]) => [l, rows.filter(f).length]), N);
+
+  const gone = rows.filter(r => r.last && r.last <= addDays(T, -3));
+  const buckets = [["0 raf", 0, 0], ["1–2 raf", 1, 2], ["3–5 raf", 3, 5], ["6–10 raf", 6, 10], ["11–20 raf", 11, 20], ["21–50 raf", 21, 50], ["51+ raf", 51, 1e9]];
+  hbars($("quit"), buckets.map(([l, a, b]) => [l, gone.filter(r => (r.levels || 0) >= a && (r.levels || 0) <= b).length]), gone.length || 1);
+
+  const rr = [1, 2, 3, 7, 14, 30].map(n => { const [a, b] = retN(n); return [`${n}. gün`, a, b]; }).filter(x => x[2] > 0);
+  $("ret").innerHTML = ""; if (!rr.length) $("ret").innerHTML = '<p class="note">Henüz yeterince eski oyuncu yok.</p>';
+  rr.forEach(([l, a, b]) => { const d = document.createElement("div"); $("ret").appendChild(d); hbars(d, [[l, a]], b); d.querySelector("i").style.width = pct(a, b) + "%"; });
+
+  const sum = f => rows.reduce((s, r) => s + (f(r) || 0), 0);
+  const buyers = rows.filter(r => (r.buys || []).length).length;
+  const oth = [
+    ["Oturum / oyuncu (ortalama)", (sum(r => r.sessions) / (N || 1)).toFixed(1)],
+    ["Günün bulmacasını en az bir kez çözen", `%${pct(rows.filter(r => r.daily > 0).length, N)}`],
+    ["Lige katılan / lig kuran", `%${pct(rows.filter(r => r.lig > 0).length, N)}`],
+    ["Oyuncu adı seçen", `%${pct(rows.filter(r => r.named).length, N)}`],
+    ["Reklam izleme / oyuncu", (sum(r => r.ads) / (N || 1)).toFixed(1)],
+    ["Satın alan oyuncu", `${fmt(buyers)} (%${pct(buyers, N)})`],
+    ["Sahaf Dostu", fmt(rows.filter(r => r.vip).length)],
+    ["Hatırlatmayı açan", `%${pct(rows.filter(r => r.notif === "on").length, N)}`],
+    ["Hatırlatmaya dokunup gelen (toplam)", fmt(sum(r => r.nOpen))],
+    ["Harf ipucu / oyuncu", (sum(r => r.hints) / (N || 1)).toFixed(1)]
+  ];
+  $("other").innerHTML = oth.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("");
+  $("when").textContent = `Oyuncu istatistikleri (anonim) · ${new Date().toLocaleString("tr-TR")}`;
+  $("login").hidden = true; $("dash").hidden = false;
+}
+
+function demoRows() {
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const T = dkey(new Date()), out = [];
+  for (let i = 0; i < 640; i++) {
+    const first = addDays(T, -Math.floor(rnd() * 30)); const days = [first]; let lv = rnd() < .9 ? 1 + Math.floor(rnd() * 4) : 0;
+    let alive = rnd() < .38; for (let d = 1; alive && addDays(first, d) <= T; d++) { if (rnd() < .7) { days.push(addDays(first, d)); lv += Math.floor(rnd() * 6); } alive = rnd() < .9; }
+    out.push({ os: rnd() < .8 ? "android" : "ios", first, last: days[days.length - 1], days, sessions: days.length + Math.floor(rnd() * days.length), levels: lv, tut: lv > 0 || rnd() < .4, named: rnd() < .85, daily: Math.floor(rnd() * days.length), lig: rnd() < .2 ? 1 : 0, ads: Math.floor(rnd() * lv / 2), buys: rnd() < .015 ? ["ipucu_10"] : [], vip: rnd() < .004, notif: rnd() < .45 ? "on" : "off", nOpen: Math.floor(rnd() * 3), hints: Math.floor(rnd() * lv / 3) });
+  }
+  return out;
+}
+
+if (new URLSearchParams(location.search).has("demo")) { $("demo").style.display = "block"; render(demoRows()); }
+else {
+  const [{ initializeApp }, A, F] = await Promise.all([
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`),
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-auth.js`),
+    import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`)
+  ]);
+  const app = initializeApp(FIREBASE), auth = A.getAuth(app), db = F.getFirestore(app);
+  const load = async () => {
+    try { const snap = await F.getDocs(F.collection(db, "ev")); render(snap.docs.map(d => d.data())); $("refresh").hidden = false; $("out").hidden = false; }
+    catch (e) { $("err").textContent = "Veriler okunamadı. Firestore kurallarındaki SAHIP_GMAIL_ADRESI yerine bu hesabın adresini yazdığından emin ol. (" + (e.code || e.message) + ")"; $("login").hidden = false; $("dash").hidden = true; }
+  };
+  A.onAuthStateChanged(auth, u => { if (u) load(); });
+  $("go").onclick = () => A.signInWithPopup(auth, new A.GoogleAuthProvider()).catch(e => $("err").textContent = "Giriş yapılamadı: " + (e.code || e.message));
+  $("refresh").onclick = load;
+  $("out").onclick = () => A.signOut(auth).then(() => location.reload());
+}
+</script>
+</body>
+</html>
